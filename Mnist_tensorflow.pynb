@@ -1,0 +1,241 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "name": "Mnist with cnn",
+      "provenance": [],
+      "collapsed_sections": []
+    },
+    "kernelspec": {
+      "display_name": "Python 3",
+      "name": "python3"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "I-mrzDGLO7bp",
+        "outputId": "d14652e6-0b7c-4126-ebdf-8caa0c27d954"
+      },
+      "source": [
+        "\"\"\"This is my first draft of MNIST handwritten digit classification dataset with CNN.\n",
+        "\"\"\"\n",
+        "\n",
+        "!pip install mnist\n",
+        "import mnist\n",
+        "import numpy as np\n",
+        "import matplotlib.pyplot as plt"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Collecting mnist\n",
+            "  Downloading https://files.pythonhosted.org/packages/c6/c4/5db3bfe009f8d71f1d532bbadbd0ec203764bba3a469e4703a889db8e5e0/mnist-0.2.2-py2.py3-none-any.whl\n",
+            "Requirement already satisfied: numpy in /usr/local/lib/python3.6/dist-packages (from mnist) (1.19.5)\n",
+            "Installing collected packages: mnist\n",
+            "Successfully installed mnist-0.2.2\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "fshwvD70BhSe",
+        "outputId": "58d6532e-df21-4e1c-ef25-c04eedf10aef"
+      },
+      "source": [
+        "#Loading the dataset\n",
+        "train_images=mnist.train_images() #[60000,28,28]\n",
+        "train_labels_new=mnist.train_labels() #[60000]\n",
+        "test_images=mnist.test_images()   #[10000,28,28]\n",
+        "test_labels_new=mnist.test_labels()   #[10000]\n",
+        "\n",
+        "#One hot encoding \n",
+        "digits=10\n",
+        "num_labels=train_labels_new.shape[0] #[60000]\n",
+        "num_test_labels=test_labels_new.shape[0] #[10000]\n",
+        "\n",
+        "print(\"Training label shape before one hot encoding:\",train_labels_new.shape)\n",
+        "print(\"Testing label shape before one hot encoding:\",test_labels_new.shape)\n",
+        "\n",
+        "train_labels=np.eye(digits)[train_labels_new.astype('int32')]\n",
+        "test_labels=np.eye(digits)[test_labels_new.astype(\"int32\")]\n",
+        "\n",
+        "train_labels=train_labels.reshape(num_labels,digits)\n",
+        "test_labels=test_labels.reshape(num_test_labels,digits)\n",
+        "\n",
+        "print(\"Training labels after one hot encoding:\",train_labels.shape)\n",
+        "print(\"Testing labels after one hot encoding:\",test_labels.shape)\n"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Training label shape before one hot encoding: (60000,)\n",
+            "Testing label shape before one hot encoding: (10000,)\n",
+            "Training labels after one hot encoding: (60000, 10)\n",
+            "Testing labels after one hot encoding: (10000, 10)\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "GfU5jG1zefwP",
+        "outputId": "ad5b1968-df5f-4520-e849-1f1b19657cee"
+      },
+      "source": [
+        "#Reshaping the array to 4-D for it to work for keras(pixels,width,height,channels) as mnist is grayscale so channel=1\n",
+        "\n",
+        "train_images=train_images.reshape(train_images.shape[0],28,28,1) #(60000,28,28,1)\n",
+        "test_images=test_images.reshape(test_images.shape[0],28,28,1) #(10000,28,28,1)\n",
+        "\n",
+        "#Normalizing the pixel values from unsigned integer[0,255] to float[0,1]\n",
+        "train_images=train_images.astype(\"float32\")\n",
+        "test_images=test_images.astype(\"float32\")\n",
+        "\n",
+        "train_images /= 255\n",
+        "test_images /= 255"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "60000\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "background_save": true,
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "xfI7kO8Cf9sh",
+        "outputId": "c8081610-69ef-4098-8738-12bec9fd43bb"
+      },
+      "source": [
+        "from keras.models import Sequential\n",
+        "from keras.layers import Dense, Conv2D, Flatten, MaxPooling2D\n",
+        "\n",
+        "model = Sequential()\n",
+        "model.add(Conv2D(32,(3,3),activation=\"relu\",kernel_initializer=\"he_uniform\",input_shape=(28,28,1)))\n",
+        "model.add(MaxPooling2D(pool_size=(2,2)))\n",
+        "model.add(Flatten())\n",
+        "model.add(Dense(100,activation=\"relu\"))\n",
+        "model.add(Dense(10,activation=\"softmax\"))\n",
+        "model.compile(optimizer=\"adam\",loss=\"categorical_crossentropy\",metrics=[\"accuracy\"])\n",
+        "model.fit(x=train_images,y=train_labels,epochs=10)\n"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Epoch 1/10\n",
+            "1875/1875 [==============================] - 31s 16ms/step - loss: 1.0131 - accuracy: 0.7134\n",
+            "Epoch 2/10\n",
+            "1875/1875 [==============================] - 31s 16ms/step - loss: 0.2778 - accuracy: 0.9171\n",
+            "Epoch 3/10\n",
+            "1875/1875 [==============================] - 30s 16ms/step - loss: 0.2068 - accuracy: 0.9369\n",
+            "Epoch 4/10\n",
+            "1875/1875 [==============================] - 30s 16ms/step - loss: 0.1533 - accuracy: 0.9541\n",
+            "Epoch 5/10\n",
+            "1875/1875 [==============================] - 30s 16ms/step - loss: 0.1284 - accuracy: 0.9617\n",
+            "Epoch 6/10\n",
+            "1875/1875 [==============================] - 31s 16ms/step - loss: 0.1045 - accuracy: 0.9697\n",
+            "Epoch 7/10\n",
+            "1875/1875 [==============================] - 31s 16ms/step - loss: 0.0918 - accuracy: 0.9729\n",
+            "Epoch 8/10\n",
+            "1875/1875 [==============================] - 30s 16ms/step - loss: 0.0783 - accuracy: 0.9767\n",
+            "Epoch 9/10\n",
+            "1875/1875 [==============================] - 31s 16ms/step - loss: 0.0716 - accuracy: 0.9784\n",
+            "Epoch 10/10\n",
+            "1875/1875 [==============================] - 31s 17ms/step - loss: 0.0601 - accuracy: 0.9826\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "<tensorflow.python.keras.callbacks.History at 0x7fc9ca68a5c0>"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 0
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "27tvrBU1bGsG",
+        "outputId": "a9d646d0-539f-41e4-c1e5-b32558f77f42"
+      },
+      "source": [
+        "model.evaluate(x=test_images,y=test_labels,verbose=1)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "313/313 [==============================] - 2s 7ms/step - loss: 0.0821 - accuracy: 0.9814\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "[0.08205709606409073, 0.9814000129699707]"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 9
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "iWn2VLCSlNwO"
+      },
+      "source": [
+        ""
+      ],
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
